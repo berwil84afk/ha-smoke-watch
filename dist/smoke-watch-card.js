@@ -9,7 +9,7 @@
  * and end of life are found on the same device; they can be set by hand too.
  */
 
-const CARD_VERSION = "0.1.0";
+const CARD_VERSION = "0.1.1";
 const STYLES = ["device", "alert", "rooms"];
 
 const TEXT = {
@@ -277,6 +277,15 @@ class SmokeWatchCard extends HTMLElement {
     return [t[`${e.msgKey}_h`] + extra, t[`${e.msgKey}_s`]];
   }
 
+  /** "Smoke detector Hallway", but not "Smoke detector Smoke detector Shed" when the device name says it already. */
+  _title(d, t) {
+    if (this._config.title) return this._config.title;
+    const name = String(d.name);
+    const says = [TEXT.de.detector, TEXT.en.detector, "smoke", "rauch"]
+      .some((w) => name.toLowerCase().includes(w.toLowerCase()));
+    return says ? name : `${t.detector} ${name}`;
+  }
+
   _checkIcon(c) {
     return icon(c.bad && c.iconBad ? c.iconBad : c.icon);
   }
@@ -291,7 +300,7 @@ class SmokeWatchCard extends HTMLElement {
       const a = (i * 30 * Math.PI) / 180;
       return `<line class="slot" x1="${60 + Math.cos(a) * 30}" y1="${60 + Math.sin(a) * 30}" x2="${60 + Math.cos(a) * 40}" y2="${60 + Math.sin(a) * 40}"/>`;
     }).join("");
-    const title = this._config.title || `${t.detector} ${d.name}`;
+    const title = this._title(d, t);
     const chips = e.checks.map((c) => {
       const label = `${t[c.k]}: ${t[`${c.k}_${c.bad ? "bad" : "ok"}`]}`;
       return `<span class="chip c-${c.bad ? c.sev : "ok"}" title="${esc(label)}" role="img" aria-label="${esc(label)}">${this._checkIcon(c)}</span>`;
@@ -303,11 +312,16 @@ class SmokeWatchCard extends HTMLElement {
   }
 
   _alert(d, e, t) {
-    const title = this._config.title || `${t.detector} ${d.name}`;
+    const title = this._title(d, t);
     if (e.sev === "ok") {
       const score = fmt(t.checks_ok, { o: e.checks.length, n: e.checks.length });
+      const checks = e.checks.map((c) => {
+        const label = `${t[c.k]}: ${t[`${c.k}_ok`]}`;
+        return `<span class="c-ok" title="${esc(label)}" role="img" aria-label="${esc(label)}">${this._checkIcon(c)}</span>`;
+      }).join("");
       return `<button type="button" class="slim tap" data-sev="ok" data-entity="${esc(d.entity)}">
-        <span class="c-ok">${icon("det")}</span><span class="n">${esc(title)}</span><span class="meta">${esc(score)}</span></button>`;
+        <span class="badge">${icon("det")}</span><span class="n">${esc(title)}</span>
+        <span class="mini">${checks}</span><span class="meta">${esc(score)}</span></button>`;
     }
     const [head, sub] = this._headline(e, t);
     const actions = (this._config.actions || [])
@@ -408,7 +422,9 @@ const STYLE = `<style>
 
   /* alert */
   .slim { display: flex; align-items: center; gap: 10px; padding: 12px 16px; box-sizing: border-box; }
-  .slim .n { flex: 1; font-weight: 500; }
+  .slim .badge { width: 32px; height: 32px; }
+  .slim .n { flex: 1; min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slim .mini .ico { width: 18px; height: 18px; }
   .slim .meta { font-size: 12px; font-weight: 500; color: var(--sw-muted); font-variant-numeric: tabular-nums; }
   .alert { padding: 18px; color: #fff; background: var(--s); display: flex; flex-direction: column; gap: 12px; }
   .alert[data-sev="crit"] { background: linear-gradient(135deg, var(--sw-crit), color-mix(in srgb, var(--sw-crit) 70%, #000)); }

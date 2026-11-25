@@ -59,6 +59,13 @@
       add(`sensor.rm_${id}_battery`, "87", "battery");
       add(`binary_sensor.rm_${id}_end_of_life`, over.eol || "off", "problem");
     });
+    // A detector without an area whose device name already says "Rauchmelder", with only three checks.
+    devices.dev_garten = { id: "dev_garten", name: EN ? "Smoke detector shed" : "Rauchmelder Gartenhaus" };
+    [["binary_sensor.rm_garten_smoke", "off", "smoke"], ["binary_sensor.rm_garten_online", "on", "connectivity"],
+     ["sensor.rm_garten_battery", "64", "battery"]].forEach(([eid, state, dc]) => {
+      states[eid] = { entity_id: eid, state, attributes: { device_class: dc } };
+      entities[eid] = { entity_id: eid, device_id: "dev_garten" };
+    });
     return { states, entities, devices, areas, language: LANG, locale: { language: LANG } };
   }
   const configs = [
@@ -67,6 +74,7 @@
       { name: EN ? "Hallway camera" : "Kamera Flur", tap_action: { action: "navigate", navigation_path: "/lovelace/kameras" } },
       { name: EN ? "Call 112" : "Notruf 112", severity: "crit", tap_action: { action: "url", url_path: "tel:112" } },
     ] },
+    { style: "alert", entities: ["binary_sensor.rm_garten_smoke"] },
     { style: "rooms", entities: ROOMS.map(([id]) => `binary_sensor.rm_${id}_smoke`) },
   ];
   const cards = configs.map((c) => {
