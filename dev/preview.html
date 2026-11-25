@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smoke Watch Card Preview</title>
+<style>
+  :root {
+    --primary-text-color: #212121; --secondary-text-color: #727272; --divider-color: #e0e0e0;
+    --card-background-color: #fff; --secondary-background-color: #eef0f3;
+    color-scheme: light;
+  }
+  body.dark {
+    --primary-text-color: #e1e1e1; --secondary-text-color: #9b9b9b; --divider-color: #333;
+    --card-background-color: #1c1c1c; --secondary-background-color: #111316; background: #111; color-scheme: dark;
+  }
+  body { font-family: Roboto, system-ui, sans-serif; background: #f2f2f2; color: var(--primary-text-color); margin: 0; padding: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; align-items: start; }
+  ha-card { display: block; background: var(--card-background-color); border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--primary-text-color); }
+  .bar { margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .bar button[aria-pressed="true"] { font-weight: 700; }
+  #log { font: 12px monospace; color: var(--secondary-text-color); margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="bar" id="bar"><button onclick="document.body.classList.toggle('dark')">Hell/Dunkel</button></div>
+<div class="grid" id="grid"></div>
+<div id="log"></div>
+<script>customElements.define("ha-card", class extends HTMLElement {});</script>
+<script src="../dist/smoke-watch-card.js"></script>
+<script>
+  const ROOMS = [["flur", "Flur"], ["schlafzimmer", "Schlafzimmer"], ["kinderzimmer", "Kinderzimmer"]];
+  const SCEN = {
+    ok: ["Normal", {}], smoke: ["Rauch", { smoke: "on" }], fault: ["Störung", { fault: "on" }],
+    offline: ["Offline", { online: "off" }], battery: ["Batterie schwach", { battery: "on" }],
+    eol: ["Lebensdauer", { eol: "on" }], multi: ["Batterie + Lebensdauer", { battery: "on", eol: "on" }],
+    gone: ["Nicht verfügbar", { smoke: "unavailable" }],
+  };
+  let cur = "ok";
+  function makeHass() {
+    const states = {}, entities = {}, devices = {}, areas = {};
+    ROOMS.forEach(([id, name], i) => {
+      const over = i === 0 ? SCEN[cur][1] : {};
+      areas[id] = { area_id: id, name };
+      devices["dev_" + id] = { id: "dev_" + id, name: "Rauchmelder " + name, area_id: id };
+      const add = (eid, state, dc) => {
+        states[eid] = { entity_id: eid, state, attributes: { device_class: dc } };
+        entities[eid] = { entity_id: eid, device_id: "dev_" + id };
+      };
+      add(`binary_sensor.rm_${id}_smoke`, over.smoke || "off", "smoke");
+      add(`binary_sensor.rm_${id}_smoke_fault_status`, over.fault || "off", "problem");
+      add(`binary_sensor.rm_${id}_online_status`, over.online || "on", "connectivity");
+      add(`binary_sensor.rm_${id}_battery_status`, over.battery || "off", "battery");
+      add(`sensor.rm_${id}_battery`, "87", "battery");
+      add(`binary_sensor.rm_${id}_end_of_life`, over.eol || "off", "problem");
+    });
+    return { states, entities, devices, areas, language: "de", locale: { language: "de" } };
+  }
+  const configs = [
+    { style: "device", entities: ["binary_sensor.rm_flur_smoke"] },
+    { style: "alert", entities: ["binary_sensor.rm_flur_smoke"], actions: [
+      { name: "Kamera Flur", tap_action: { action: "navigate", navigation_path: "/lovelace/kameras" } },
+      { name: "Notruf 112", severity: "crit", tap_action: { action: "url", url_path: "tel:112" } },
+    ] },
+    { style: "rooms", entities: ROOMS.map(([id]) => `binary_sensor.rm_${id}_smoke`) },
+  ];
+  const cards = configs.map((c) => {
+    const el = document.createElement("smoke-watch-card");
+    el.setConfig(c);
+    document.getElementById("grid").appendChild(el);
+    return el;
+  });
+  const update = () => {
+    const hass = makeHass();
+    cards.forEach((c) => (c.hass = hass));
+    document.querySelectorAll("#bar [data-k]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.k === cur));
+  };
+  Object.entries(SCEN).forEach(([k, [label]]) => {
+    const b = document.createElement("button");
+    b.textContent = label; b.dataset.k = k;
+    b.onclick = () => { cur = k; update(); };
+    document.getElementById("bar").appendChild(b);
+  });
+  ["hass-more-info", "hass-action"].forEach((n) => document.addEventListener(n, (e) => {
+    document.getElementById("log").textContent = n + " " + JSON.stringify(e.detail);
+  }));
+  update();
+</script>
+</body>
+</html>
