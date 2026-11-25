@@ -10,7 +10,7 @@ Eine Dashboard-Karte, die deine Rauchmelder auf einen Blick zeigt: Rauch, Sensor
 
 | Stil | Zeigt | Gut für |
 |---|---|---|
-| `device` | Einen Melder als Gerät. Ring und LED haben die Farbe des Zustands und blinken bei Rauch. Darunter ein Symbol je Prüfpunkt. | Eine Raumansicht |
+| `device` | Einen Melder als Gerät. Ring und LED haben die Farbe des Zustands und blinken bei Rauch. Darunter je ein Symbol für Sensor, Verbindung, Batterie und Lebensdauer. | Eine Raumansicht |
 | `alert` | Einen Melder als schmale Zeile, solange alles gut ist, sonst einen farbigen Alarmblock mit eigenen Knöpfen. | Übersichtsseiten |
 | `rooms` | Alle Melder in einer Liste. Räume mit Problem sind hervorgehoben und nennen, was nicht stimmt. | Das Haupt-Dashboard |
 

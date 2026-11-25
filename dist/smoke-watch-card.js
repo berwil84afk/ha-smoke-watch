@@ -9,7 +9,7 @@
  * and end of life are found on the same device; they can be set by hand too.
  */
 
-const CARD_VERSION = "0.1.2";
+const CARD_VERSION = "0.1.3";
 const STYLES = ["device", "alert", "rooms"];
 
 const TEXT = {
@@ -248,7 +248,9 @@ class SmokeWatchCard extends HTMLElement {
     const top = bad[0];
     const sev = top ? top.sev : "ok";
     const msgKey = !top ? "ok" : top.sev === "warn" ? top.k : top.sev;
-    return { checks, bad, sev, msgKey, missing: !smoke };
+    // The device checks shown as icons; smoke itself is what the ring, LED and status text show.
+    const device = checks.filter((c) => c.k !== "smoke");
+    return { checks, device, bad, sev, msgKey, missing: !smoke };
   }
 
   // -- rendering ----------------------------------------------------------------
@@ -304,7 +306,7 @@ class SmokeWatchCard extends HTMLElement {
       return `<line class="slot" x1="${60 + Math.cos(a) * 30}" y1="${60 + Math.sin(a) * 30}" x2="${60 + Math.cos(a) * 40}" y2="${60 + Math.sin(a) * 40}"/>`;
     }).join("");
     const title = this._title(d, t);
-    const chips = e.checks.map((c) => {
+    const chips = e.device.map((c) => {
       const label = `${t[c.k]}: ${t[`${c.k}_${c.bad ? "bad" : "ok"}`]}`;
       return `<span class="chip c-${c.bad ? c.sev : "ok"}" title="${esc(label)}" role="img" aria-label="${esc(label)}">${this._checkIcon(c)}</span>`;
     }).join("");
@@ -317,8 +319,8 @@ class SmokeWatchCard extends HTMLElement {
   _alert(d, e, t) {
     const title = this._title(d, t);
     if (e.sev === "ok") {
-      const score = fmt(t.checks_ok, { o: e.checks.length, n: e.checks.length });
-      const checks = e.checks.map((c) => {
+      const score = fmt(t.checks_ok, { o: e.device.length, n: e.device.length });
+      const checks = e.device.map((c) => {
         const label = `${t[c.k]}: ${t[`${c.k}_ok`]}`;
         return `<span class="c-ok" title="${esc(label)}" role="img" aria-label="${esc(label)}">${this._checkIcon(c)}</span>`;
       }).join("");
@@ -334,7 +336,7 @@ class SmokeWatchCard extends HTMLElement {
       <button type="button" class="top tap" data-entity="${esc(d.entity)}">${this._badgeIcon(e.sev)}
         <span><span class="h">${esc(head)}</span><span class="s">${esc(d.name)} · ${esc(sub)}</span></span></button>
       ${actions ? `<div class="actions">${actions}</div>` : ""}
-      <div class="foot">${e.checks.map((c) => `<span title="${esc(t[c.k])}">${this._checkIcon(c)}</span>`).join("")}</div></div>`;
+      <div class="foot">${e.device.map((c) => `<span title="${esc(t[c.k])}">${this._checkIcon(c)}</span>`).join("")}</div></div>`;
   }
 
   _rooms(detectors, t) {
@@ -347,7 +349,7 @@ class SmokeWatchCard extends HTMLElement {
     const list = rows.map(({ d, e }) => {
       const sub = e.missing ? t.not_found : e.sev === "ok" ? t.ok : this._headline(e, t)[1];
       const mini = e.sev === "ok"
-        ? `<span class="mini">${e.checks.filter((c) => c.k !== "smoke").map((c) => `<span class="c-mute" title="${esc(t[c.k])}">${this._checkIcon(c)}</span>`).join("")}</span>`
+        ? `<span class="mini">${e.device.map((c) => `<span class="c-mute" title="${esc(t[c.k])}">${this._checkIcon(c)}</span>`).join("")}</span>`
         : "";
       const issues = e.bad.length
         ? `<div class="issues">${e.bad.map((c) => `<span class="pill c-${c.sev}">${esc(t[PROBLEM[c.k]])}</span>`).join("")}</div>`

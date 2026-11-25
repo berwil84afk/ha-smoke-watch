@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.1.3
+
+- Die Symbolreihen zeigen keine Flamme mehr: Ob Rauch da ist, sagen schon Ring, LED und Statustext. Die Symbole stehen jetzt nur für die Geräteprüfungen (Sensor, Verbindung, Batterie, Lebensdauer), und die Zahl daneben (etwa „4/4 OK“) zählt nur diese.
+
 ## 0.1.2
 
 - Raumliste: Eine Problem-Plakette nennt jetzt nur das Problem („Rauch erkannt“ statt „Rauch: Rauch erkannt“).

@@ -10,7 +10,7 @@ A dashboard card that shows your smoke detectors at a glance: smoke, sensor faul
 
 | Style | Shows | Good for |
 |---|---|---|
-| `device` | One detector drawn as a device. Ring and LED take the state colour and blink on smoke. Below: one icon per check. | A room view |
+| `device` | One detector drawn as a device. Ring and LED take the state colour and blink on smoke. Below: one icon each for sensor, connection, battery and lifetime. | A room view |
 | `alert` | One detector as a slim line while all is well; a coloured alert block with your own buttons when not. | Overview pages |
 | `rooms` | All detectors in one list. Rooms with a problem are highlighted and list what is wrong. | The main dashboard |
 

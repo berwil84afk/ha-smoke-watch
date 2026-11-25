@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- The icon rows no longer show a flame: whether there is smoke is what the ring, the LED and the status text already say. The icons now only cover the device checks (sensor, connection, battery, lifetime), and the count next to them (for example "4/4 OK") counts just these.
+
 ## 0.1.2
 
 - Room list: a problem badge now just names the problem ("Smoke detected" instead of "Smoke: Smoke detected").
