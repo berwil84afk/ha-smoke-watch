@@ -9,7 +9,7 @@
  * and end of life are found on the same device; they can be set by hand too.
  */
 
-const CARD_VERSION = "0.1.1";
+const CARD_VERSION = "0.1.2";
 const STYLES = ["device", "alert", "rooms"];
 
 const TEXT = {
@@ -59,6 +59,9 @@ const CHECKS = [
   { k: "battery", icon: "battery", sev: "warn" },
   { k: "eol", icon: "cal", sev: "warn" },
 ];
+
+/* Short name of each problem, for the badges in the room list ("Smoke detected", not "Smoke: Smoke detected"). */
+const PROBLEM = { smoke: "crit_h", fault: "fault_h", online: "off_h", battery: "battery_h", eol: "eol_h" };
 
 const ICONS = {
   flame: '<path d="M12 3c1 3 4.5 4.8 4.5 9.2a4.5 4.5 0 0 1-9 0c0-2.2 1.1-3.4 2.2-4.4 0 1.6.9 2.7 2.1 2.7 0-3-1-5.1.2-7.5z"/>',
@@ -347,7 +350,7 @@ class SmokeWatchCard extends HTMLElement {
         ? `<span class="mini">${e.checks.filter((c) => c.k !== "smoke").map((c) => `<span class="c-mute" title="${esc(t[c.k])}">${this._checkIcon(c)}</span>`).join("")}</span>`
         : "";
       const issues = e.bad.length
-        ? `<div class="issues">${e.bad.map((c) => `<span class="pill c-${c.sev}">${esc(t[c.k])}: ${esc(t[`${c.k}_bad`])}</span>`).join("")}</div>`
+        ? `<div class="issues">${e.bad.map((c) => `<span class="pill c-${c.sev}">${esc(t[PROBLEM[c.k]])}</span>`).join("")}</div>`
         : "";
       return `<div class="room" data-sev="${e.sev}"><button type="button" class="tile tap" data-entity="${esc(d.entity)}">
         <span class="badge">${this._badgeIcon(e.sev)}</span>
@@ -402,7 +405,7 @@ const STYLE = `<style>
   .empty { padding: 16px; color: var(--sw-muted); }
 
   /* device */
-  .device { padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; box-sizing: border-box; }
+  .device { padding: 20px 12px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; box-sizing: border-box; }
   .det { width: 116px; height: 116px; }
   .det .body { fill: var(--sw-bg); stroke: var(--sw-line); stroke-width: 2; }
   .det .ring { fill: none; stroke: var(--s); stroke-width: 5; opacity: .9; }
@@ -416,9 +419,11 @@ const STYLE = `<style>
   .dtitle { font-size: 12px; color: var(--sw-muted); letter-spacing: .04em; text-transform: uppercase; }
   .dstatus { font-size: 20px; font-weight: 700; color: var(--s); margin-top: 2px; }
   .dsub { color: var(--sw-muted); font-size: 13px; }
-  .chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  .chip { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+  /* One row always: on narrow tiles the chips shrink instead of wrapping. */
+  .chips { display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap; width: 100%; }
+  .chip { flex: 0 1 38px; min-width: 24px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
     background: color-mix(in srgb, currentColor 12%, transparent); }
+  .chip .ico { width: 55%; height: 55%; max-width: 20px; max-height: 20px; }
 
   /* alert */
   .slim { display: flex; align-items: center; gap: 10px; padding: 12px 16px; box-sizing: border-box; }

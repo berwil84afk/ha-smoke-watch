@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.1.2
+
+- Raumliste: Eine Problem-Plakette nennt jetzt nur das Problem („Rauch erkannt“ statt „Rauch: Rauch erkannt“).
+- Gerät: Auf schmalen Kacheln werden die Symbole kleiner und bleiben in einer Reihe, statt umzubrechen.
+
 ## 0.1.1
 
 - Alarm zuerst: Die schmale Zeile zeigt jetzt ein Symbol je Prüfpunkt.

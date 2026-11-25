@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Room list: a problem badge now just names the problem ("Smoke detected" instead of "Smoke: Smoke detected").
+- Device: on narrow tiles the check icons shrink and stay in one row instead of wrapping.
+
 ## 0.1.1
 
 - Alert first: the slim line now shows an icon for each check.
