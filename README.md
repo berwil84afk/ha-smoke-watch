@@ -16,6 +16,20 @@ A dashboard card that shows your smoke detectors at a glance: smoke, sensor faul
 
 States in order of priority: **smoke** › **sensor fault** › **offline** › **battery low** › **end of life**.
 
+### All states per style
+
+**Device** (`device`): the ring, the LED and the status text take the colour of the most important problem; the icons below show which check it is.
+
+![Style device in every state](docs/screenshots/en/states-device.png)
+
+**Alert first** (`alert`): a slim line while all is well, otherwise a coloured block. The buttons are your own; with `severity` each one appears only in the states it fits.
+
+![Style alert first in every state](docs/screenshots/en/states-alert.png)
+
+**Room list** (`rooms`): the badge in the header counts the detectors with a problem and takes the colour of the worst one. Rooms with a problem list every check that is not fine.
+
+![Style room list: all clear, maintenance due, alarm](docs/screenshots/en/states-rooms.png)
+
 ## Installation
 
 1. In HACS, add this repository as a custom repository of type **Dashboard**.
@@ -92,3 +106,5 @@ actions:
 ## Development
 
 `dev/preview.html` shows all three styles with simulated states. Serve the repository folder, for example with `python -m http.server`, and open `/dev/preview.html`.
+
+The README screenshots come from `dev/screenshots.html` and `dev/preview.html`; `python dev/make_screenshots.py` renders them again (needs Chrome or Edge and Pillow).

@@ -16,6 +16,20 @@ Eine Dashboard-Karte, die deine Rauchmelder auf einen Blick zeigt: Rauch, Sensor
 
 Zustände nach Wichtigkeit: **Rauch** › **Sensorstörung** › **Offline** › **Batterie schwach** › **Lebensdauer erreicht**.
 
+### Alle Zustände je Stil
+
+**Gerät** (`device`): Ring, LED und Statustext nehmen die Farbe des wichtigsten Problems an. Die Symbole darunter zeigen, welcher Prüfpunkt es ist.
+
+![Stil Gerät in allen Zuständen](docs/screenshots/de/states-device.png)
+
+**Alarm zuerst** (`alert`): eine schmale Zeile, solange alles gut ist, sonst ein farbiger Block. Die Knöpfe legst du selbst fest; mit `severity` erscheint jeder nur in den Zuständen, zu denen er passt.
+
+![Stil Alarm zuerst in allen Zuständen](docs/screenshots/de/states-alert.png)
+
+**Raumliste** (`rooms`): Die Plakette im Kopf zählt die Melder mit Problem und hat die Farbe des schlimmsten. Räume mit Problem nennen jeden Prüfpunkt, der nicht in Ordnung ist.
+
+![Stil Raumliste: alles in Ordnung, Wartung fällig, Alarm](docs/screenshots/de/states-rooms.png)
+
 ## Installation
 
 1. In HACS dieses Repository als benutzerdefiniertes Repository vom Typ **Dashboard** hinzufügen.
@@ -92,3 +106,5 @@ actions:
 ## Entwicklung
 
 `dev/preview.html` zeigt alle drei Stile mit simulierten Zuständen. Den Repository-Ordner ausliefern, zum Beispiel mit `python -m http.server`, und `/dev/preview.html` öffnen.
+
+Die Screenshots der README kommen aus `dev/screenshots.html` und `dev/preview.html`; `python dev/make_screenshots.py` erzeugt sie neu (braucht Chrome oder Edge und Pillow).

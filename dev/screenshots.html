@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smoke Watch Screenshots</title>
+<style>
+  :root {
+    --primary-text-color: #212121; --secondary-text-color: #727272; --divider-color: #e0e0e0;
+    --card-background-color: #fff; --secondary-background-color: #eef0f3; color-scheme: light;
+  }
+  body.dark {
+    --primary-text-color: #e1e1e1; --secondary-text-color: #9b9b9b; --divider-color: #333;
+    --card-background-color: #1c1c1c; --secondary-background-color: #111316; background: #111; color-scheme: dark;
+  }
+  body { font-family: Roboto, system-ui, sans-serif; background: #f2f2f2; color: var(--primary-text-color); margin: 0; padding: 24px; }
+  .grid { display: grid; gap: 20px; align-items: start; }
+  figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  figcaption { font-size: 13px; font-weight: 500; color: var(--secondary-text-color); letter-spacing: .03em; }
+</style>
+</head>
+<body>
+<div class="grid" id="grid"></div>
+<script>customElements.define("ha-card", class extends HTMLElement {});</script>
+<script src="../dist/smoke-watch-card.js"></script>
+<script>
+  /* ?shot=device|alert|rooms&lang=de|en&theme=dark */
+  const params = new URLSearchParams(location.search);
+  const SHOT = params.get("shot") || "device";
+  const EN = params.get("lang") === "en";
+  if (params.get("theme") === "dark") document.body.classList.add("dark");
+
+  const L = (de, en) => (EN ? en : de);
+  const ROOMS = [["flur", L("Flur", "Hallway")], ["schlafzimmer", L("Schlafzimmer", "Bedroom")],
+    ["kinderzimmer", L("Kinderzimmer", "Nursery")], ["keller", L("Keller", "Basement")]];
+  const STATES = {
+    ok: [L("Normal", "Normal"), {}],
+    smoke: [L("Rauch", "Smoke"), { smoke: "on" }],
+    fault: [L("Sensorstörung", "Sensor fault"), { fault: "on" }],
+    offline: [L("Offline", "Offline"), { online: "off" }],
+    battery: [L("Batterie schwach", "Battery low"), { battery: "on" }],
+    eol: [L("Lebensdauer erreicht", "End of life"), { eol: "on" }],
+  };
+
+  /** A hass object; `over` maps a room id to the states that differ from normal. */
+  function makeHass(over) {
+    const states = {}, entities = {}, devices = {}, areas = {};
+    for (const [id, name] of ROOMS) {
+      const o = over[id] || {};
+      areas[id] = { area_id: id, name };
+      devices["dev_" + id] = { id: "dev_" + id, name: "Smoke " + id, area_id: id };
+      const add = (eid, state, dc) => {
+        states[eid] = { entity_id: eid, state, attributes: { device_class: dc } };
+        entities[eid] = { entity_id: eid, device_id: "dev_" + id };
+      };
+      add(`binary_sensor.rm_${id}_smoke`, o.smoke || "off", "smoke");
+      add(`binary_sensor.rm_${id}_smoke_fault_status`, o.fault || "off", "problem");
+      add(`binary_sensor.rm_${id}_online_status`, o.online || "on", "connectivity");
+      add(`binary_sensor.rm_${id}_battery_status`, o.battery || "off", "battery");
+      add(`binary_sensor.rm_${id}_end_of_life`, o.eol || "off", "problem");
+    }
+    const lang = EN ? "en" : "de";
+    return { states, entities, devices, areas, language: lang, locale: { language: lang } };
+  }
+
+  const ACTIONS = [
+    { name: L("Kamera Flur", "Hallway camera"), severity: "crit", tap_action: { action: "none" } },
+    { name: L("Notruf 112", "Call 112"), severity: "crit", tap_action: { action: "none" } },
+    { name: L("Testalarm", "Test alarm"), severity: "fault", tap_action: { action: "none" } },
+    { name: L("Erinnerung setzen", "Remind me"), severity: "warn", tap_action: { action: "none" } },
+  ];
+  const ONE = ["binary_sensor.rm_flur_smoke"];
+  const ALL = ROOMS.map(([id]) => `binary_sensor.rm_${id}_smoke`);
+
+  let items, columns;
+  if (SHOT === "rooms") {
+    columns = "repeat(3, 340px)";
+    items = [
+      [L("Alles in Ordnung", "All clear"), {}],
+      [L("Wartung fällig", "Maintenance due"), { schlafzimmer: { battery: "on" }, keller: { eol: "on", battery: "on" } }],
+      [L("Alarm", "Alarm"), { flur: { smoke: "on" }, keller: { online: "off" } }],
+    ].map(([label, over]) => [label, { style: "rooms", entities: ALL }, over]);
+  } else {
+    columns = SHOT === "alert" ? "repeat(2, 420px)" : "repeat(3, 300px)";
+    items = Object.values(STATES).map(([label, o]) => [
+      label, { style: SHOT, entities: ONE, ...(SHOT === "alert" ? { actions: ACTIONS } : {}) }, { flur: o },
+    ]);
+  }
+
+  const grid = document.getElementById("grid");
+  grid.style.gridTemplateColumns = columns;
+  for (const [label, config, over] of items) {
+    const fig = document.createElement("figure");
+    fig.innerHTML = `<figcaption>${label}</figcaption>`;
+    const card = document.createElement("smoke-watch-card");
+    card.setConfig(config);
+    card.hass = makeHass(over);
+    fig.appendChild(card);
+    grid.appendChild(fig);
+  }
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@ Usage (from the repository root):
     python -m http.server 8765 --bind 127.0.0.1
     python dev/make_screenshots.py
 
-Writes docs/screenshots/<lang>/card-styles.png, trimmed to the content.
+Writes docs/screenshots/<lang>/<shot>.png, trimmed to the content.
 Needs Pillow for trimming.
 """
 
@@ -18,7 +18,14 @@ from pathlib import Path
 
 from PIL import Image, ImageChops
 
-BASE_URL = "http://127.0.0.1:8765/dev/preview.html?bare&state=smoke"
+BASE_URL = "http://127.0.0.1:8765/dev/"
+SHOTS = {
+    # name: (page and query, window width, window height)
+    "card-styles": ("preview.html?bare&state=smoke", 1100, 420),
+    "states-device": ("screenshots.html?shot=device", 1040, 900),
+    "states-alert": ("screenshots.html?shot=alert", 960, 760),
+    "states-rooms": ("screenshots.html?shot=rooms", 1160, 620),
+}
 OUT = Path(__file__).resolve().parent.parent / "docs" / "screenshots"
 BROWSERS = [
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -49,16 +56,18 @@ def trim(path: Path, margin: int = 24) -> None:
 def main() -> None:
     exe = browser()
     for lang in ("de", "en"):
-        target = OUT / lang / "card-styles.png"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory() as profile:
-            subprocess.run([
-                exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--user-data-dir={profile}",
-                "--force-device-scale-factor=2", "--window-size=1100,420", "--virtual-time-budget=1500",
-                f"--screenshot={target}", f"{BASE_URL}&lang={lang}",
-            ], check=True, capture_output=True)
-        trim(target)
-        print(target)
+        for name, (query, width, height) in SHOTS.items():
+            target = OUT / lang / f"{name}.png"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory() as profile:
+                subprocess.run([
+                    exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--user-data-dir={profile}",
+                    "--force-device-scale-factor=2", f"--window-size={width},{height}",
+                    "--force-prefers-reduced-motion", "--virtual-time-budget=1500",
+                    f"--screenshot={target}", f"{BASE_URL}{query}&lang={lang}",
+                ], check=True, capture_output=True)
+            trim(target)
+            print(target)
 
 
 if __name__ == "__main__":
