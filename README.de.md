@@ -1,6 +1,6 @@
 # Smoke Watch Card für Home Assistant
 
-[English](README.md) · **Deutsch** · [Changelog](CHANGELOG.md)
+[English](README.md) · **Deutsch** · [Änderungsprotokoll](CHANGELOG.de.md)
 
 Eine Dashboard-Karte, die deine Rauchmelder auf einen Blick zeigt: Rauch, Sensorstörung, Verbindung, Batterie und Lebensdauer. Ist alles in Ordnung, bleibt sie ruhig. Ist etwas nicht in Ordnung, sagt sie, was los ist und was zu tun ist.
 

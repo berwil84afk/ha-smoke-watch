@@ -1,6 +1,6 @@
 # Smoke Watch Card for Home Assistant
 
-**English** · [Deutsch](README.de.md) · [Changelog](CHANGELOG.md)
+**English** · [Deutsch](README.de.md) · [Changelog](CHANGELOG.md) · [Änderungsprotokoll](CHANGELOG.de.md)
 
 A dashboard card that shows your smoke detectors at a glance: smoke, sensor fault, connection, battery and end of life. If everything is fine it stays quiet; if something is wrong it says what and what to do.
 
