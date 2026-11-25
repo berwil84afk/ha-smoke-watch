@@ -30,7 +30,10 @@
 <script>customElements.define("ha-card", class extends HTMLElement {});</script>
 <script src="../dist/smoke-watch-card.js"></script>
 <script>
-  const ROOMS = [["flur", "Flur"], ["schlafzimmer", "Schlafzimmer"], ["kinderzimmer", "Kinderzimmer"]];
+  const EN = new URLSearchParams(location.search).get("lang") === "en";
+  const ROOMS = EN
+    ? [["flur", "Hallway"], ["schlafzimmer", "Bedroom"], ["kinderzimmer", "Nursery"]]
+    : [["flur", "Flur"], ["schlafzimmer", "Schlafzimmer"], ["kinderzimmer", "Kinderzimmer"]];
   const SCEN = {
     ok: ["Normal", {}], smoke: ["Rauch", { smoke: "on" }], fault: ["Störung", { fault: "on" }],
     offline: ["Offline", { online: "off" }], battery: ["Batterie schwach", { battery: "on" }],
@@ -38,6 +41,7 @@
     gone: ["Nicht verfügbar", { smoke: "unavailable" }],
   };
   let cur = "ok";
+  const LANG = new URLSearchParams(location.search).get("lang") || "de";
   function makeHass() {
     const states = {}, entities = {}, devices = {}, areas = {};
     ROOMS.forEach(([id, name], i) => {
@@ -55,13 +59,13 @@
       add(`sensor.rm_${id}_battery`, "87", "battery");
       add(`binary_sensor.rm_${id}_end_of_life`, over.eol || "off", "problem");
     });
-    return { states, entities, devices, areas, language: "de", locale: { language: "de" } };
+    return { states, entities, devices, areas, language: LANG, locale: { language: LANG } };
   }
   const configs = [
     { style: "device", entities: ["binary_sensor.rm_flur_smoke"] },
     { style: "alert", entities: ["binary_sensor.rm_flur_smoke"], actions: [
-      { name: "Kamera Flur", tap_action: { action: "navigate", navigation_path: "/lovelace/kameras" } },
-      { name: "Notruf 112", severity: "crit", tap_action: { action: "url", url_path: "tel:112" } },
+      { name: EN ? "Hallway camera" : "Kamera Flur", tap_action: { action: "navigate", navigation_path: "/lovelace/kameras" } },
+      { name: EN ? "Call 112" : "Notruf 112", severity: "crit", tap_action: { action: "url", url_path: "tel:112" } },
     ] },
     { style: "rooms", entities: ROOMS.map(([id]) => `binary_sensor.rm_${id}_smoke`) },
   ];
@@ -85,6 +89,11 @@
   ["hass-more-info", "hass-action"].forEach((n) => document.addEventListener(n, (e) => {
     document.getElementById("log").textContent = n + " " + JSON.stringify(e.detail);
   }));
+  // ?state=smoke&bare for screenshots: start in a state and hide the controls.
+  const params = new URLSearchParams(location.search);
+  if (SCEN[params.get("state")]) cur = params.get("state");
+  if (params.has("bare")) { document.getElementById("bar").style.display = "none"; document.getElementById("log").style.display = "none"; }
+  if (params.has("dark")) document.body.classList.add("dark");
   update();
 </script>
 </body>

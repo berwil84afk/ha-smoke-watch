@@ -4,6 +4,8 @@
 
 A dashboard card that shows your smoke detectors at a glance: smoke, sensor fault, connection, battery and end of life. If everything is fine it stays quiet; if something is wrong it says what and what to do.
 
+![Smoke Watch card in three styles](docs/screenshots/en/card-styles.png)
+
 ## Styles
 
 | Style | Shows | Good for |

@@ -4,6 +4,8 @@
 
 Eine Dashboard-Karte, die deine Rauchmelder auf einen Blick zeigt: Rauch, Sensorstörung, Verbindung, Batterie und Lebensdauer. Ist alles in Ordnung, bleibt sie ruhig. Ist etwas nicht in Ordnung, sagt sie, was los ist und was zu tun ist.
 
+![Smoke Watch Card in drei Stilen](docs/screenshots/de/card-styles.png)
+
 ## Stile
 
 | Stil | Zeigt | Gut für |
