@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.2.0
+
+- Der Name kommt jetzt aus dem Gerätenamen statt aus dem Bereich. In der Raumliste fällt ein vorangestelltes „Rauchmelder“ weg.
+- Das Batteriesymbol zeigt den Füllstand und das Verbindungssymbol Signalbalken, wenn das Gerät einen Batterie-Prozentwert oder einen Signalsensor hat (Linkqualität, RSSI oder Signalstärke). Die Tooltips nennen die Werte. Neue Optionen `battery_level` und `signal` legen diese Sensoren von Hand fest.
+
 ## 0.1.3
 
 - Die Symbolreihen zeigen keine Flamme mehr: Ob Rauch da ist, sagen schon Ring, LED und Statustext. Die Symbole stehen jetzt nur für die Geräteprüfungen (Sensor, Verbindung, Batterie, Lebensdauer), und die Zahl daneben (etwa „4/4 OK“) zählt nur diese.

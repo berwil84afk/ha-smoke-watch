@@ -9,7 +9,7 @@
  * and end of life are found on the same device; they can be set by hand too.
  */
 
-const CARD_VERSION = "0.1.3";
+const CARD_VERSION = "0.2.0";
 const STYLES = ["device", "alert", "rooms"];
 
 const TEXT = {
@@ -122,24 +122,51 @@ function findSiblings(hass, smokeId) {
       found.fault ??= id;
     } else if (/end_of_life|lifecycle|lifetime|lebensdauer/.test(key)) {
       found.end_of_life ??= id;
+    } else if (/linkquality|link_quality|\blqi\b|_lqi|rssi|signal/.test(key) || dc === "signal_strength") {
+      if (!binary) found.signal ??= id;
     } else if (/online|connectivity/.test(key) || dc === "connectivity") {
       found.online ??= id;
     } else if (/batter/.test(key) || dc === "battery") {
-      // A binary "battery low" wins over a percentage.
+      // A binary "battery low" wins over a percentage for the check;
+      // the percentage still draws the fill level.
       if (!found.battery || (binary && !found.battery.startsWith("binary_sensor."))) found.battery = id;
+      if (!binary && numeric(state) !== null) found.battery_level ??= id;
     }
   }
   return found;
 }
 
-/** The name to show: given, else the area, else the device, else the entity. */
+/** The name to show: the device name, else the entity name, else the area. */
 function detectorName(hass, smokeId) {
   const entry = hass.entities?.[smokeId];
   const device = entry?.device_id && hass.devices?.[entry.device_id];
   const areaId = entry?.area_id || device?.area_id;
   const area = areaId && hass.areas?.[areaId]?.name;
-  return area || device?.name_by_user || device?.name
-    || hass.states[smokeId]?.attributes?.friendly_name || smokeId;
+  return device?.name_by_user || device?.name
+    || hass.states[smokeId]?.attributes?.friendly_name || area || smokeId;
+}
+
+/** "Rauchmelder Wohnzimmer" -> "Wohnzimmer" for the room list, whose header already says it. */
+function shortName(name) {
+  const short = String(name).replace(/^(rauchwarnmelder|rauchmelder|smoke detector|smoke alarm)\s*[-–:·]?\s*/i, "");
+  return short || String(name);
+}
+
+/** Signal strength as 0-4 bars: dBm (RSSI), % or a Zigbee link quality (0-255). */
+function signalBars(state) {
+  const value = parseFloat(state?.state);
+  if (!Number.isFinite(value)) return null;
+  const unit = state.attributes?.unit_of_measurement || "";
+  if (unit === "dBm" || unit === "dB" || value < 0) {
+    return value >= -55 ? 4 : value >= -65 ? 3 : value >= -75 ? 2 : value >= -85 ? 1 : 0;
+  }
+  if (unit === "%") return Math.min(4, Math.ceil(value / 25));
+  return value >= 180 ? 4 : value >= 120 ? 3 : value >= 60 ? 2 : value > 0 ? 1 : 0;
+}
+
+function numeric(state) {
+  const value = parseFloat(state?.state);
+  return Number.isFinite(value) ? value : null;
 }
 
 function normaliseEntities(list) {
@@ -224,10 +251,13 @@ class SmokeWatchCard extends HTMLElement {
     const hass = this._hass;
     const found = findSiblings(hass, spec.entity);
     const pick = (k) => (spec[k] === null || spec[k] === false ? null : spec[k] || found[k] || null);
+    const name = spec.name || detectorName(hass, spec.entity);
     return {
       entity: spec.entity,
-      name: spec.name || detectorName(hass, spec.entity),
+      name,
+      short: spec.name || shortName(name),
       fault: pick("fault"), online: pick("online"), battery: pick("battery"), end_of_life: pick("end_of_life"),
+      battery_level: pick("battery_level"), signal: pick("signal"),
     };
   }
 
@@ -243,7 +273,20 @@ class SmokeWatchCard extends HTMLElement {
       battery: d.battery ? batteryLow(st(d.battery), Number(this._config.battery_threshold) || 20) : null,
       eol: d.end_of_life ? isOn(st(d.end_of_life)) : null,
     };
-    const checks = CHECKS.filter((c) => values[c.k] !== null).map((c) => ({ ...c, bad: values[c.k] }));
+    // What the icons draw: fill level of the battery, bars of the signal.
+    const levelState = st(d.battery_level) || (d.battery && !d.battery.startsWith("binary_sensor.") ? st(d.battery) : null);
+    const level = isGone(levelState) ? null : numeric(levelState);
+    const signal = d.signal ? st(d.signal) : null;
+    const bars = isGone(signal) ? null : signalBars(signal);
+    const extra = {
+      battery: { level, detail: level === null ? "" : `${Math.round(level)} %` },
+      online: {
+        bars,
+        detail: bars === null ? "" : `${numeric(signal)} ${signal.attributes?.unit_of_measurement || "LQI"}`,
+      },
+    };
+    const checks = CHECKS.filter((c) => values[c.k] !== null)
+      .map((c) => ({ ...c, ...(extra[c.k] || {}), bad: values[c.k] }));
     const bad = checks.filter((c) => c.bad);
     const top = bad[0];
     const sev = top ? top.sev : "ok";
@@ -260,7 +303,8 @@ class SmokeWatchCard extends HTMLElement {
     const hass = this._hass;
     const t = TEXT[lang(hass)];
     const detectors = this._entities.map((spec) => this._detector(spec));
-    const ids = detectors.flatMap((d) => [d.entity, d.fault, d.online, d.battery, d.end_of_life]).filter(Boolean);
+    const ids = detectors.flatMap((d) => [d.entity, d.fault, d.online, d.battery, d.end_of_life, d.battery_level, d.signal])
+      .filter(Boolean);
     const key = [lang(hass), ...ids.map((id) => `${id}=${hass.states[id]?.state}`), ...detectors.map((d) => d.name)].join("|");
     if (key === this._renderKey) return;
     this._renderKey = key;
@@ -292,7 +336,28 @@ class SmokeWatchCard extends HTMLElement {
   }
 
   _checkIcon(c) {
+    const svg = (inner) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${inner}</svg>`;
+    if (c.k === "battery") {
+      // Fill level as a bar inside the battery; without a percentage a full one, or a sliver when low.
+      const pct = c.level ?? (c.bad ? 10 : 100);
+      const w = Math.max(1.2, (12 * Math.min(100, Math.max(0, pct))) / 100);
+      return svg(`<rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21.5 10.5v3"/>`
+        + `<rect class="fill" x="5" y="9" width="${w.toFixed(1)}" height="6" rx="1"/>`);
+    }
+    if (c.k === "online") {
+      // Signal bars; all of them when connected without a signal sensor, none with a slash when offline.
+      const on = c.bad ? 0 : c.bars ?? 4;
+      const bars = [5, 9, 13, 17].map((h, i) =>
+        `<rect class="${i < on ? "fill" : "fill dim"}" x="${3 + i * 5}" y="${20 - h}" width="3" height="${h}" rx=".8"/>`).join("");
+      return svg(bars + (c.bad ? '<path d="M3 4l18 17"/>' : ""));
+    }
     return icon(c.bad && c.iconBad ? c.iconBad : c.icon);
+  }
+
+  /** Tooltip of an icon, with the value where there is one: "Battery: 87 %". */
+  _label(c, t) {
+    const state = t[`${c.k}_${c.bad ? "bad" : "ok"}`];
+    return `${t[c.k]}: ${c.detail ? (c.bad ? `${state} · ${c.detail}` : c.detail) : state}`;
   }
 
   _badgeIcon(sev) {
@@ -307,7 +372,7 @@ class SmokeWatchCard extends HTMLElement {
     }).join("");
     const title = this._title(d, t);
     const chips = e.device.map((c) => {
-      const label = `${t[c.k]}: ${t[`${c.k}_${c.bad ? "bad" : "ok"}`]}`;
+      const label = this._label(c, t);
       return `<span class="chip c-${c.bad ? c.sev : "ok"}" title="${esc(label)}" role="img" aria-label="${esc(label)}">${this._checkIcon(c)}</span>`;
     }).join("");
     return `<button type="button" class="device tap" data-sev="${e.sev}" data-entity="${esc(d.entity)}">
@@ -321,7 +386,7 @@ class SmokeWatchCard extends HTMLElement {
     if (e.sev === "ok") {
       const score = fmt(t.checks_ok, { o: e.device.length, n: e.device.length });
       const checks = e.device.map((c) => {
-        const label = `${t[c.k]}: ${t[`${c.k}_ok`]}`;
+        const label = this._label(c, t);
         return `<span class="c-ok" title="${esc(label)}" role="img" aria-label="${esc(label)}">${this._checkIcon(c)}</span>`;
       }).join("");
       return `<button type="button" class="slim tap" data-sev="ok" data-entity="${esc(d.entity)}">
@@ -334,9 +399,9 @@ class SmokeWatchCard extends HTMLElement {
       .map((a, i) => `<button type="button" class="act" data-action="${i}">${esc(a.name)}</button>`).join("");
     return `<div class="alert" data-sev="${e.sev}">
       <button type="button" class="top tap" data-entity="${esc(d.entity)}">${this._badgeIcon(e.sev)}
-        <span><span class="h">${esc(head)}</span><span class="s">${esc(d.name)} · ${esc(sub)}</span></span></button>
+        <span><span class="h">${esc(head)}</span><span class="s">${esc(d.short)} ·${esc(sub)}</span></span></button>
       ${actions ? `<div class="actions">${actions}</div>` : ""}
-      <div class="foot">${e.device.map((c) => `<span title="${esc(t[c.k])}">${this._checkIcon(c)}</span>`).join("")}</div></div>`;
+      <div class="foot">${e.device.map((c) => `<span title="${esc(this._label(c, t))}">${this._checkIcon(c)}</span>`).join("")}</div></div>`;
   }
 
   _rooms(detectors, t) {
@@ -349,14 +414,14 @@ class SmokeWatchCard extends HTMLElement {
     const list = rows.map(({ d, e }) => {
       const sub = e.missing ? t.not_found : e.sev === "ok" ? t.ok : this._headline(e, t)[1];
       const mini = e.sev === "ok"
-        ? `<span class="mini">${e.device.map((c) => `<span class="c-mute" title="${esc(t[c.k])}">${this._checkIcon(c)}</span>`).join("")}</span>`
+        ? `<span class="mini">${e.device.map((c) => `<span class="c-mute" title="${esc(this._label(c, t))}">${this._checkIcon(c)}</span>`).join("")}</span>`
         : "";
       const issues = e.bad.length
         ? `<div class="issues">${e.bad.map((c) => `<span class="pill c-${c.sev}">${esc(t[PROBLEM[c.k]])}</span>`).join("")}</div>`
         : "";
       return `<div class="room" data-sev="${e.sev}"><button type="button" class="tile tap" data-entity="${esc(d.entity)}">
         <span class="badge">${this._badgeIcon(e.sev)}</span>
-        <span class="txt"><span class="n">${esc(d.name)}</span><span class="st">${esc(sub)}</span></span>${mini}</button>${issues}</div>`;
+        <span class="txt"><span class="n">${esc(d.short)}</span><span class="st">${esc(sub)}</span></span>${mini}</button>${issues}</div>`;
     }).join("");
     return `<div class="rooms" data-sev="${worst}"><div class="head"><span class="n">${esc(title)}</span><span class="score">${esc(score)}</span></div>${list}</div>`;
   }
@@ -399,6 +464,8 @@ const STYLE = `<style>
   [data-sev="fault"] { --s: var(--sw-fault); } [data-sev="off"] { --s: var(--sw-off); }
   .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8;
     stroke-linecap: round; stroke-linejoin: round; flex: none; display: block; }
+  .ico .fill { fill: currentColor; stroke: none; }
+  .ico .dim { opacity: .25; }
   .c-ok { color: var(--sw-ok); } .c-warn { color: var(--sw-warn); } .c-crit { color: var(--sw-crit); }
   .c-fault { color: var(--sw-fault); } .c-off { color: var(--sw-off); } .c-mute { color: var(--sw-muted); }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; text-align: inherit; }

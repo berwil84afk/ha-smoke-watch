@@ -56,7 +56,10 @@
       add(`binary_sensor.rm_${id}_smoke_fault_status`, over.fault || "off", "problem");
       add(`binary_sensor.rm_${id}_online_status`, over.online || "on", "connectivity");
       add(`binary_sensor.rm_${id}_battery_status`, over.battery || "off", "battery");
-      add(`sensor.rm_${id}_battery`, "87", "battery");
+      add(`sensor.rm_${id}_battery`, over.battery ? "9" : ["87", "55", "30"][i], "battery");
+      states[`sensor.rm_${id}_battery`].attributes.unit_of_measurement = "%";
+      add(`sensor.rm_${id}_linkquality`, over.online === "off" ? "unavailable" : ["205", "130", "70"][i], undefined);
+      states[`sensor.rm_${id}_linkquality`].attributes.unit_of_measurement = "lqi";
       add(`binary_sensor.rm_${id}_end_of_life`, over.eol || "off", "problem");
     });
     // A detector without an area whose device name already says "Rauchmelder", with only three checks.

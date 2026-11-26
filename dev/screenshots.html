@@ -48,7 +48,7 @@
     for (const [id, name] of ROOMS) {
       const o = over[id] || {};
       areas[id] = { area_id: id, name };
-      devices["dev_" + id] = { id: "dev_" + id, name: "Smoke " + id, area_id: id };
+      devices["dev_" + id] = { id: "dev_" + id, name: L("Rauchmelder ", "Smoke detector ") + name, area_id: id };
       const add = (eid, state, dc) => {
         states[eid] = { entity_id: eid, state, attributes: { device_class: dc } };
         entities[eid] = { entity_id: eid, device_id: "dev_" + id };
@@ -58,6 +58,12 @@
       add(`binary_sensor.rm_${id}_online_status`, o.online || "on", "connectivity");
       add(`binary_sensor.rm_${id}_battery_status`, o.battery || "off", "battery");
       add(`binary_sensor.rm_${id}_end_of_life`, o.eol || "off", "problem");
+      const level = { flur: 92, schlafzimmer: 64, kinderzimmer: 41, keller: 77 }[id];
+      add(`sensor.rm_${id}_battery`, o.battery === "on" ? "8" : String(level), "battery");
+      states[`sensor.rm_${id}_battery`].attributes.unit_of_measurement = "%";
+      const lqi = { flur: 210, schlafzimmer: 140, kinderzimmer: 95, keller: 38 }[id];
+      add(`sensor.rm_${id}_linkquality`, o.online === "off" ? "unavailable" : String(lqi), undefined);
+      states[`sensor.rm_${id}_linkquality`].attributes.unit_of_measurement = "lqi";
     }
     const lang = EN ? "en" : "de";
     return { states, entities, devices, areas, language: lang, locale: { language: lang } };

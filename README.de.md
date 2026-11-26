@@ -10,7 +10,7 @@ Eine Dashboard-Karte, die deine Rauchmelder auf einen Blick zeigt: Rauch, Sensor
 
 | Stil | Zeigt | Gut für |
 |---|---|---|
-| `device` | Einen Melder als Gerät. Ring und LED haben die Farbe des Zustands und blinken bei Rauch. Darunter je ein Symbol für Sensor, Verbindung, Batterie und Lebensdauer. | Eine Raumansicht |
+| `device` | Einen Melder als Gerät. Ring und LED haben die Farbe des Zustands und blinken bei Rauch. Darunter je ein Symbol für Sensor, Verbindung, Batterie und Lebensdauer; die Batterie zeigt ihren Füllstand, die Verbindung ihre Signalbalken. | Eine Raumansicht |
 | `alert` | Einen Melder als schmale Zeile, solange alles gut ist, sonst einen farbigen Alarmblock mit eigenen Knöpfen. | Übersichtsseiten |
 | `rooms` | Alle Melder in einer Liste. Räume mit Problem sind hervorgehoben und nennen, was nicht stimmt. | Das Haupt-Dashboard |
 
@@ -47,7 +47,7 @@ entities:
   - binary_sensor.schlafzimmer_rauch
 ```
 
-Du gibst je Melder nur die **Rauch-Entität** an. Batterie, Verbindung, Störung und Lebensdauer sucht die Karte selbst auf demselben Gerät, den Raumnamen nimmt sie aus dem Bereich des Geräts.
+Du gibst je Melder nur die **Rauch-Entität** an. Batterie, Verbindung, Störung und Lebensdauer sucht die Karte selbst auf demselben Gerät, dazu für die Symbole einen Batterie-Prozentwert und einen Signalsensor (Linkqualität, RSSI oder Signalstärke). Als Name nimmt sie den Gerätenamen; in der Raumliste lässt sie ein vorangestelltes „Rauchmelder“ weg, weil es schon im Kopf steht.
 
 Passt das bei deinen Meldern nicht, legst du sie von Hand fest (`null` schaltet einen Prüfpunkt ab):
 
@@ -59,6 +59,8 @@ entities:
     online: binary_sensor.kueche_rauchmelder_online
     fault: binary_sensor.kueche_rauchmelder_stoerung
     end_of_life: null
+    battery_level: sensor.kueche_rauchmelder_batterie_prozent
+    signal: sensor.kueche_rauchmelder_linkquality
 ```
 
 | Option | Standard | Bedeutung |
@@ -67,6 +69,8 @@ entities:
 | `style` | `device` bei einem, `rooms` bei mehreren | `device`, `alert` oder `rooms` |
 | `title` | Melder- bzw. Raumname | Titel der Karte |
 | `battery_threshold` | `20` | Unter diesem Prozentwert gilt die Batterie als schwach (bei Sensoren in %) |
+
+Signalbalken: Bei RSSI gibt es ab -55 dBm vier Balken, danach je 10 dB einen weniger; bei einer Linkqualität (0-255) ab 180, 120, 60 und über 0; bei Prozent in Vierteln. Ohne Signalsensor zeigt ein verbundener Melder alle vier Balken.
 | `actions` | – | Knöpfe im Alarmblock (Stil `alert`) |
 
 ### Knöpfe im Alarmblock

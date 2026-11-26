@@ -10,7 +10,7 @@ A dashboard card that shows your smoke detectors at a glance: smoke, sensor faul
 
 | Style | Shows | Good for |
 |---|---|---|
-| `device` | One detector drawn as a device. Ring and LED take the state colour and blink on smoke. Below: one icon each for sensor, connection, battery and lifetime. | A room view |
+| `device` | One detector drawn as a device. Ring and LED take the state colour and blink on smoke. Below: one icon each for sensor, connection, battery and lifetime; the battery shows its fill level and the connection its signal bars. | A room view |
 | `alert` | One detector as a slim line while all is well; a coloured alert block with your own buttons when not. | Overview pages |
 | `rooms` | All detectors in one list. Rooms with a problem are highlighted and list what is wrong. | The main dashboard |
 
@@ -47,7 +47,7 @@ entities:
   - binary_sensor.bedroom_smoke
 ```
 
-You only give the **smoke entity** of each detector. The card finds battery, connection, fault and end-of-life entities on the same device by itself and takes the room name from the device's area.
+You only give the **smoke entity** of each detector. The card finds battery, connection, fault and end-of-life entities on the same device by itself, as well as a battery percentage and a signal sensor (link quality, RSSI or signal strength) for the icons. The name is the device name; in the room list a leading "Smoke detector" is left out because the header says it already.
 
 If that does not fit your detectors, set them by hand (`null` switches a check off):
 
@@ -59,6 +59,8 @@ entities:
     online: binary_sensor.kitchen_smoke_online
     fault: binary_sensor.kitchen_smoke_fault
     end_of_life: null
+    battery_level: sensor.kitchen_smoke_battery_percent
+    signal: sensor.kitchen_smoke_linkquality
 ```
 
 | Option | Default | Meaning |
@@ -67,6 +69,8 @@ entities:
 | `style` | `device` for one, `rooms` for several | `device`, `alert` or `rooms` |
 | `title` | Detector / room name | Card title |
 | `battery_threshold` | `20` | Below this percentage a battery counts as low (for sensors in %) |
+
+Signal bars: RSSI from -55 dBm upwards gives four bars, then one bar less every 10 dB; a link quality (0-255) from 180, 120, 60 and above 0; a percentage in quarters. Without a signal sensor a connected detector shows all four bars.
 | `actions` | – | Buttons in the alert block (style `alert`) |
 
 ### Buttons in the alert block
