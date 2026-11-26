@@ -9,7 +9,7 @@
  * and end of life are found on the same device; they can be set by hand too.
  */
 
-const CARD_VERSION = "0.2.0";
+const CARD_VERSION = "0.2.1";
 const STYLES = ["device", "alert", "rooms"];
 
 const TEXT = {
@@ -101,8 +101,8 @@ const isGone = (s) => !s || s.state === "unavailable";
 function batteryLow(state, threshold) {
   if (!state || isGone(state) || state.state === "unknown") return false;
   if (state.entity_id.startsWith("binary_sensor.")) return isOn(state);
-  const value = parseFloat(state.state);
-  if (Number.isFinite(value)) return value < threshold;
+  const value = numeric(state);
+  if (value !== null) return value < threshold;
   return String(state.state).toLowerCase() === "low";
 }
 
@@ -126,11 +126,13 @@ function findSiblings(hass, smokeId) {
       if (!binary) found.signal ??= id;
     } else if (/online|connectivity/.test(key) || dc === "connectivity") {
       found.online ??= id;
-    } else if (/batter/.test(key) || dc === "battery") {
+    } else if ((/batter/.test(key) || dc === "battery") && !["timestamp", "date", "voltage"].includes(dc)
+      && (isGone(state) || state.state === "unknown" || isBatteryState(state))) {
       // A binary "battery low" wins over a percentage for the check;
-      // the percentage still draws the fill level.
+      // the percentage still draws the fill level. Dates such as
+      // "battery replaced" and voltages are left out.
       if (!found.battery || (binary && !found.battery.startsWith("binary_sensor."))) found.battery = id;
-      if (!binary && numeric(state) !== null) found.battery_level ??= id;
+      if (!binary && isBatteryPercent(state)) found.battery_level ??= id;
     }
   }
   return found;
@@ -154,8 +156,8 @@ function shortName(name) {
 
 /** Signal strength as 0-4 bars: dBm (RSSI), % or a Zigbee link quality (0-255). */
 function signalBars(state) {
-  const value = parseFloat(state?.state);
-  if (!Number.isFinite(value)) return null;
+  const value = numeric(state);
+  if (value === null) return null;
   const unit = state.attributes?.unit_of_measurement || "";
   if (unit === "dBm" || unit === "dB" || value < 0) {
     return value >= -55 ? 4 : value >= -65 ? 3 : value >= -75 ? 2 : value >= -85 ? 1 : 0;
@@ -164,9 +166,27 @@ function signalBars(state) {
   return value >= 180 ? 4 : value >= 120 ? 3 : value >= 60 ? 2 : value > 0 ? 1 : 0;
 }
 
+/** The state as a number, but only when it is one: "87" yes, "2026-03-01" (a date) no. */
 function numeric(state) {
-  const value = parseFloat(state?.state);
+  const text = String(state?.state ?? "").trim();
+  if (!/^-?\d+([.,]\d+)?$/.test(text)) return null;
+  const value = Number(text.replace(",", "."));
   return Number.isFinite(value) ? value : null;
+}
+
+/** A battery charge in %: a number in % or with the battery device class, not a date or a voltage. */
+function isBatteryPercent(state) {
+  const unit = state?.attributes?.unit_of_measurement;
+  const value = numeric(state);
+  return value !== null && value >= 0 && value <= 100
+    && (unit === "%" || (!unit && state.attributes?.device_class === "battery"));
+}
+
+/** A state a battery check can read: binary, a charge in % or a level word such as "low". */
+function isBatteryState(state) {
+  if (state.entity_id.startsWith("binary_sensor.")) return true;
+  if (isBatteryPercent(state)) return true;
+  return ["low", "middle", "medium", "high", "full", "normal", "ok"].includes(String(state.state).toLowerCase());
 }
 
 function normaliseEntities(list) {
@@ -275,7 +295,7 @@ class SmokeWatchCard extends HTMLElement {
     };
     // What the icons draw: fill level of the battery, bars of the signal.
     const levelState = st(d.battery_level) || (d.battery && !d.battery.startsWith("binary_sensor.") ? st(d.battery) : null);
-    const level = isGone(levelState) ? null : numeric(levelState);
+    const level = levelState && !isGone(levelState) && isBatteryPercent(levelState) ? numeric(levelState) : null;
     const signal = d.signal ? st(d.signal) : null;
     const bars = isGone(signal) ? null : signalBars(signal);
     const extra = {

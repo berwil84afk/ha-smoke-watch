@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.2.1
+
+- Behoben: Die Batterie konnte ein Datum als Ladestand zeigen, etwa „2026 %“ von einem Sensor „Batterie gewechselt“. Als Ladestand zählt jetzt nur eine Zahl in % (oder mit der Geräteklasse Batterie); Datums- und Spannungssensoren werden übergangen.
+
 ## 0.2.0
 
 - Der Name kommt jetzt aus dem Gerätenamen statt aus dem Bereich. In der Raumliste fällt ein vorangestelltes „Rauchmelder“ weg.

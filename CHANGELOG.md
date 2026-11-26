@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Fixed: the battery could show a date as its charge, for example "2026 %" from a "battery replaced" sensor. Only a number in % (or with the battery device class) now counts as the charge; dates and voltages are left out.
+
 ## 0.2.0
 
 - The name now comes from the device name instead of the area. In the room list a leading "Smoke detector" is left out.
